@@ -1,16 +1,16 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import hashlib
+from io import BytesIO
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 from urllib.parse import urlencode
 
-from astropy.coordinates import SkyCoord
-import astropy.units as u
+from astropy.table import Table
 from astropy.utils.data import conf as astropy_data_conf
 from astroquery.gaia import Gaia
-from astroquery.ipac.irsa import Irsa
 import requests
+from numpy.ma import is_masked
 
 from app.core.config import settings
 
@@ -67,11 +67,19 @@ class IRSAClient:
           f"Consultando TAP IRSA (dr1/qr3) en RA={ra}, Dec={dec},"
           f" FOV={fov_deg} deg"
       )
-      job = Irsa.query_tap(adql_query)
-      table = job.to_table()
+      response = requests.get(
+          self.IRSA_TAP_URL,
+          params={"QUERY": adql_query, "FORMAT": "VOTABLE"},
+          timeout=120,
+      )
+      response.raise_for_status()
+      table = Table.read(BytesIO(response.content), format="votable")
 
       observations = []
       for row in table:
+        wavelength_min = row["energy_bounds_lower"]
+        wavelength_max = row["energy_bounds_upper"]
+        access_url = str(row["uri"])
         observations.append({
             "plane_id": str(row["plane_id"]),
             "obs_id": str(row["obs_id"]),
@@ -79,16 +87,17 @@ class IRSAClient:
             "t_min": float(row["t_min"]),
             "t_max": float(row["t_max"]),
             "wavelength_min_um": (
-                float(row["energy_bounds_lower"]) * 1e6
-                if row["energy_bounds_lower"]
+                float(wavelength_min) * 1e6
+                if not is_masked(wavelength_min)
                 else None
             ),
             "wavelength_max_um": (
-                float(row["energy_bounds_upper"]) * 1e6
-                if row["energy_bounds_upper"]
+                float(wavelength_max) * 1e6
+                if not is_masked(wavelength_max)
                 else None
             ),
-            "base_uri": str(row["uri"]),
+            "access_url": access_url,
+            "base_uri": access_url,
         })
       return observations
 
@@ -121,10 +130,16 @@ class IRSAClient:
     response = requests.get(cutout_url, timeout=120, stream=True)
     response.raise_for_status()
 
-    with open(local_filepath, "wb") as f:
-      for chunk in response.iter_content(chunk_size=65536):
-        if chunk:
-          f.write(chunk)
+    temporary_filepath = f"{local_filepath}.tmp"
+    try:
+      with open(temporary_filepath, "wb") as f:
+        for chunk in response.iter_content(chunk_size=65536):
+          if chunk:
+            f.write(chunk)
+      os.replace(temporary_filepath, local_filepath)
+    finally:
+      if os.path.exists(temporary_filepath):
+        os.remove(temporary_filepath)
 
     return local_filepath
 
@@ -145,7 +160,7 @@ class IRSAClient:
       future_to_obs = {
           executor.submit(
               self._download_single_cutout,
-              obs["base_uri"],
+              obs.get("access_url") or obs["base_uri"],
               ra,
               dec,
               fov_deg,

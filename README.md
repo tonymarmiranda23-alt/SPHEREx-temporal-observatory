@@ -102,6 +102,20 @@ python -m app.scripts.build_fits_inventory
 
 El inventario conserva un único registro por archivo físico, su SHA-256, metadatos de HDU/WCS/checksum y sus consumidores. Los originales están excluidos de Git; el backend puede entregar sus bytes originales por HTTP. Las previsualizaciones PNG son productos derivados y no sustituyen los FITS.
 
+Si IRSA tarda y no hay FITS SPHEREx locales, puedes intentar registrar dos recortes reales de su archivo desde `Backend/`:
+
+```powershell
+python -m app.scripts.register_spherex_cutouts
+```
+
+El comando consulta dos observaciones únicas en IRSA, descarga cada `access_url` como cutout centrado en las coordenadas y tamaño indicados, agrega ambos archivos a `fits-consumers.json` y reconstruye el manifiesto. Acepta `--ra`, `--dec` y `--fov-deg`; la opción predeterminada usa el Polo Eclíptico Norte. Si ya tienes dos recortes FITS reales descargados manualmente y la consulta IRSA tarda, puedes registrarlos sin conexión:
+
+```powershell
+python -m app.scripts.register_spherex_cutouts --files .\recorte-1.fits .\recorte-2.fits
+```
+
+En ese modo, copia los archivos al inventario `data/raw/spherex`, registra ambos en `fits-consumers.json` y reconstruye el manifiesto. El script valida que el inventario pueda leerlos y no crea datos sintéticos.
+
 ### Paso 2 — Instalar y arrancar el frontend
 
 Abre una segunda terminal desde la raíz del proyecto:
