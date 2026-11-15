@@ -1,0 +1,10 @@
+{
+  "description": "Explore SPHEREx sky imagery, compare observations over time, analyze infrared spectra, and review potential moving objects in one scientific workspace.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "release-dr1/observation-001.fits": {
+    "consumers": ["sky_explorer", "temporal_vision", "discovery_catalog"],
+    "product_type": "MEF Level 2",
+    "source": "IRSA",
+    "downloaded_at": null
+  },
+  "release-dr1/spectral-product-001.fits": {
+    "consumers": ["spectral_analysis"],
+    "product_type": "MEF Level 2",
+    "source": "IRSA"
+  }
+}
