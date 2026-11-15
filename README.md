@@ -26,11 +26,12 @@ SPHEREx-temporal-observatory/
 │   │   ├── models/              # Modelos SQLAlchemy
 │   │   ├── schemas/             # Esquemas Pydantic
 │   │   ├── services/            # IRSA, FITS, renderizado y análisis
+│   │   ├── scripts/             # Herramientas para inventario y recortes SPHEREx
 │   │   └── main.py              # Aplicación FastAPI y ciclo de vida
 │   ├── data/
 │   │   ├── raw/spherex/        # FITS originales (excluidos de Git)
 │   │   └── processed/spherex/  # Manifiesto y productos derivados
-│   ├── tests/                  # Pruebas sobre FITS sintéticos temporales
+│   ├── tests/                  # Pruebas unitarias y FITS temporales
 │   ├── fits-consumers.example.json
 │   ├── .env.example
 │   └── requirements.txt
@@ -169,6 +170,8 @@ No agregues credenciales reales al repositorio.
 4. Los endpoints delegan las operaciones en los servicios de IRSA, FITS, análisis temporal y renderizado.
 5. Los resultados gráficos procesados se guardan en `data/processed` y se sirven mediante `/static`.
 
+El cliente de IRSA consulta el TAP síncrono oficial con `requests` y parsea la respuesta VOTable. Los `access_url` se solicitan como recortes centrados y se descargan por streaming; no se usa `Irsa.query_tap`.
+
 ## 6. Comprobaciones realizadas y alcance
 
 - Se reorganizaron las carpetas para evitar rutas anidadas de exportación.
@@ -178,6 +181,9 @@ No agregues credenciales reales al repositorio.
 - Se añadió el puerto local 8443 a los orígenes CORS, ya que es el puerto configurado en Vite.
 - Se actualizaron llamadas de Matplotlib/Pillow para evitar APIs obsoletas.
 - Se añadieron instrucciones de instalación, ejecución y compilación.
+- Las consultas SPHEREx usan HTTP directo al TAP de IRSA y el parser VOTable; se eliminaron las llamadas a `Irsa.query_tap`.
+- Se añadieron pruebas del parser y de las descargas de recortes, además de un script para descargar o registrar dos FITS locales.
+- Validación de estos cambios: 3 pruebas dirigidas, compilación e imports Python correctos. Las pruebas no consultan IRSA en vivo ni validan datos científicos reales.
 
 **Datos de desarrollo:** `app/services/irsa_service.py` contiene una ruta explícitamente sintética de generación FITS para desarrollo. No se sustituyó ni se presenta como descarga real de NASA/IRSA.
 
